@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html>
+
+<script
+  src="https://code.jquery.com/jquery-3.2.1.min.js"
+    integrity="sha256-hwg4gsxgFZhOsEEamdOYGBf13FyQuiTwlAQgxVSNgt4="
+      crossorigin="anonymous"></script>
+
+<!-- Latest compiled and minified CSS -->
+<link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css" integrity="sha384-BVYiiSIFeK1dGmJRAkycuHAHRg32OmUcww7on3RYdg4Va+PmSTsz/K68vbdEjh4u" crossorigin="anonymous">
+
+<!-- Latest compiled and minified JavaScript -->
+<script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/js/bootstrap.min.js" integrity="sha384-Tc5IQib027qvyjSMfHjOMaLkfuWVxZxUPnCJA7l2mCWNIpG9mGCD8wGNIcPD7Txa" crossorigin="anonymous"></script>
+
+
+<body>
+<div class="container">
+<div class="col-md-2"></div>
+<div class="col-md-8">
+
+<h3> 日期 </h3>
+<div class="form-group">
+	<div class="col-md-6">
+        <input type="text" class="form-control" placeholder="Year" aria-describedby="basic-addon" id="year">
+    </div>
+    <div class="col-md-6">
+        <input type="text" class="form-control" placeholder="Month" aria-describedby="basic-addon" id="month" type="number">
+    </div>
+</div>
+
+<h3> 新增人員 </h3>
+<div class="form-group">
+    <div class="col-md-12">
+        <div class="col-md-3">
+            <label> 名字 </label>
+            <input type="text" class="form-control" placeholder="e.g. John" id="name">
+        </div>
+        <div class="col-md-3">
+            <label> 平日職班天數 </label>
+            <input type="text" class="form-control" placeholder="e.g. 12" id="normal">
+        </div>
+        <div class="col-md-3">
+            <label> 放日值班天數 </label>
+            <input type="text" class="form-control" placeholder="e.g. 13" id="vacation">
+        </div>
+        <div class="col-md-3">
+            <label> 不能值班那幾天 </label>
+            <input type="text" class="form-control" placeholder="格式範例: 1,15,20,31" id="ignore">
+        </div>
+    </div>
+    <div class="col-md-12" >
+        <button class="btn btn-primary" onclick="addPeople()"> 新增人員 </button>
+    </div>
+    <div class="col-md-12">
+        <table class="table table-striped" id="nametable">
+        </table>
+    </div>
+</div>
+
+<div class="col-md-12" >
+    <button class="btn btn-primary" onclick="myFunction()"> 自動排班 </button>
+    <table class="table table-striped" id="calendar">
+    </table>
+</div>
+
+
+<p id="demo"></p>
+</div>
+<div class="col-md-2"></div>
+</div>
+
+<script>
+var nametable = {};
+var curDate = new Date();
+update();
+document.getElementById("year").value = curDate.getFullYear();
+document.getElementById("month").value = parseInt(curDate.getMonth()) + 1;
+ 
+function myFunction() {
+    var year = document.getElementById("year").value;
+    var month = document.getElementById("month").value;
+    var handlerList = new Array();
+
+    year = parseInt(year);
+    month = parseInt(month);
+    
+    var d = (new Date(year, month, 0));
+    var numOfDays = d.getDate();
+    console.log("num of days = " + numOfDays.toString()); 
+    var lastperson = "";
+    for (var day = 1; day <= numOfDays; day = day + 1) {
+        var person = "";
+        d = new Date(year, month - 1, day);
+        
+        var maxDays = -1;
+        var handler = "";
+        var weekDay = d.getDay();
+        var mode = 'normal'
+        if (weekDay == 0 || weekDay == 6)
+            mode = 'vacation';
+        
+        for (name in nametable) {
+            var data = nametable[name];
+            if (checkName(lastperson, name, day, weekDay, data)) {
+                if (maxDays < data[mode]) {
+                    maxDays = data[mode];
+                    handler = name;
+                }
+            }
+        }
+        if (maxDays != -1) {
+            nametable[handler][mode] -= 1;
+            handlerList[day] = handler;
+            lastperson = handler;
+        } else {
+            lastperson = "";
+            handlerList[day] = "";
+        }
+    } 
+    console.log(handlerList);
+    var firstWeekDay = (new Date(year, month - 1, 1)).getDay();
+    var str = "<thead><th>日<\/th><th>一<\/th><th>二<\/th><th>三<\/th><th>四<\/th><th>五<\/th><th>六<\/th><\/thead>";
+    var calendar = document.getElementById('calendar');
+    calendar.innerHTML = str;
+    var cur = 0;
+    str += "<tr>"
+    while (cur < firstWeekDay) {
+        str = str + "<td> <\/td>";
+        cur = cur + 1;
+    }
+    for (var curDay = 1; curDay <= numOfDays; curDay = curDay + 1) {
+        if (cur % 7 == 0) str += "<tr>";
+        str = str + "<td>" + curDay.toString() + ". " + handlerList[curDay] + "<\/td>";
+        cur = cur + 1;
+    }
+    calendar.innerHTML = str;
+}
+
+function checkName(lastname, name, day, weekDay, data) {
+    var mode = 'normal';
+    if (name == lastname) return false;
+    if (weekDay == 0 || weekDay == 6)
+        mode = 'vacation';
+
+    if (data[mode] == 0) return false;
+    
+    var list = data['ignore'];
+    for (i in list) {
+        ignoreDay = list[i];
+        if (ignoreDay == day)
+            return false;
+    }
+    
+    return true;
+}
+
+function deletePerson(event) {
+    id = event.target.id;
+    delete nametable[id];
+    update();
+}
+
+function addPeople() {
+    name = document.getElementById('name').value;
+    normal = document.getElementById('normal').value;
+    vacation = document.getElementById('vacation').value;
+    ignore = document.getElementById('ignore').value;
+    var ignoredays = ignore.split(",");
+    var data = {};
+    for (var e in ignoredays) {
+        ignoredays[e] = parseInt(ignoredays[e]);
+    }
+    data['normal'] = parseInt(normal);
+    data['vacation'] = parseInt(vacation);
+    data['ignore'] = ignoredays;
+    nametable[name] = data;
+    update(); 
+     
+}
+
+function update() {
+    var table = document.getElementById("nametable");
+    str = "<thead>  <th> Name <\/th> <th> 平日值班天數 <\/th> <th> 假日值班天數 <\/th> <th> 不能值班的那幾天 <\/th> <\/thead>";
+    for (name in nametable) {
+        str = str + "<tr>";
+        datatable = nametable[name];
+        str = str + "<td>" + name + "<\/td>";
+        str = str + "<td>" + datatable['normal'] + "<\/td>";
+        str = str + "<td>" + datatable['vacation'] + "<\/td>";
+        str = str + "<td>" + datatable['ignore'] + "<\/td>"
+        str = str + "<td>" + "<button class=\"btn btn-danger\" onclick=\"deletePerson(event)\" id=\"" +  name + "\"> Delete <\/button>"  +  "<\/td>";
+        str = str + "<\/tr>";
+    }
+    
+    table.innerHTML = str;
+}
+
+</script>
+
+</body>
+</html>
